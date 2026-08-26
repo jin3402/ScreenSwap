@@ -190,6 +190,21 @@ Recording. Nothing is recorded, stored, or transmitted anywhere.
 
 ---
 
+## App icon
+
+`Resources/AppIcon-source.png` is the master art — a single square PNG with the
+rounded-corner plate already drawn and everything outside it transparent. To
+regenerate `Resources/AppIcon.icns` from it (`build_app.sh` picks this up
+automatically):
+
+```bash
+swift Scripts/make_icon.swift
+```
+
+Swapping in a different design is just replacing that PNG with another square,
+transparent-background image and re-running the script — it only resamples to
+every size `.icns` needs and packages them, it does not draw anything itself.
+
 ## Building
 
 ```bash
