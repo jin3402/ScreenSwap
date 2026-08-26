@@ -45,6 +45,8 @@ enum WindowSwapper {
             }
         }
 
+        MoveHistory.record(toSecond + toFirst, action: "swap all windows")
+
         let all = WindowManager.listAllWindows()
         Log.debug("swap: \(all.count) windows on screen, \(windows.count) movable")
         for window in all where !window.isMovable {
@@ -77,11 +79,47 @@ enum WindowSwapper {
     }
 
     /// Sends an explicit set of windows to one display. Used by the overlay's
-    /// arrow-key "send selection" action.
+    /// ⌘+arrow "send selection" action.
     @discardableResult
     static func move(_ windows: [WindowInfo], to screen: NSScreen) -> Int {
+        MoveHistory.record(windows, action: "send to \(DisplayManager.name(of: screen))")
         var moved = 0
         for window in windows where WindowManager.moveWindow(window, to: screen) { moved += 1 }
+        return moved
+    }
+
+    /// Moves the frontmost window one display over without opening the overlay.
+    ///
+    /// This is the common case by a wide margin — "put this one over there" — and
+    /// going through the overview for it means fanning every window out and back
+    /// just to move one. Bound to ⌃⌥arrow by default.
+    @discardableResult
+    static func moveFocusedWindow(_ direction: Direction) -> Bool {
+        guard PermissionsHelper.hasAccessibilityPermission else {
+            PermissionsHelper.presentAccessibilityAlert()
+            return false
+        }
+
+        let windows = WindowManager.listAllWindows()
+        guard let frontID = WindowManager.frontmostWindowID(in: windows),
+              let window = windows.first(where: { $0.windowID == frontID }),
+              window.isMovable else {
+            Log.debug("quick move \(direction.label): no movable frontmost window")
+            NSSound.beep()
+            return false
+        }
+
+        guard let home = DisplayManager.screen(containingCGRect: window.frame),
+              let target = DisplayManager.screen(from: home, direction: direction) else {
+            Log.debug("quick move \(direction.label): no display that way")
+            NSSound.beep()
+            return false
+        }
+
+        MoveHistory.record([window], action: "send \(window.appName) \(direction.label)")
+        let moved = WindowManager.moveWindow(window, to: target)
+        Log.debug("quick move \(direction.label): \(window.appName) -> \(DisplayManager.name(of: target)) \(moved ? "ok" : "FAILED")")
+        if !moved { NSSound.beep() }
         return moved
     }
 }

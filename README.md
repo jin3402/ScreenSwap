@@ -11,7 +11,28 @@ It fans your windows out so none of them overlap, then you aim, pick, and act.
 
 ---
 
-## How it works
+## Two ways to move a window
+
+**Just move this one** — ⌃⌥← and ⌃⌥→ send the frontmost window one display over
+immediately. No overlay, no fanning out, no aiming. This is the common case by a
+wide margin, and it is one keystroke.
+
+**Show me everything** — ⌃⌥↑ opens the overview below, for picking several windows,
+finding one you lost, or acting on something that is not frontmost.
+
+| Shortcut | Action |
+|---|---|
+| **⌃⌥←** | Send the frontmost window to the display on the left |
+| **⌃⌥→** | Send it to the display on the right |
+| **⌃⌥↓** | Send it to the display below |
+| **⌃⌥↑** | Open the window overview |
+
+All four are configurable — see [Settings](#settings). "Send up" ships unbound
+because ⌃⌥↑ is the overview; bind it if your displays are stacked.
+
+---
+
+## The overview
 
 Press **⌃⌥↑**. Every window on every display physically fans out so none of them
 overlap, and see-through outlines are drawn over them. They stay real, live
@@ -20,7 +41,7 @@ focused, outlined in **white**.
 
 Closing the overlay **any** way puts every window back exactly where it was.
 
-### Keys
+### Keys inside the overview
 
 | Key | What it does |
 |---|---|
@@ -31,7 +52,10 @@ Closing the overlay **any** way puts every window back exactly where it was.
 | **⌫ Backspace** | Take the selection back out of full screen |
 | **⌘Q** | Quit the apps owning the selection |
 | **space** | Swap **all** windows between the two displays |
-| **esc** | Close, changing nothing |
+| **1**–**9** | Jump the cursor straight to that window |
+| **type letters** | Search by app name or window title; the cursor follows the match |
+| **⌘Z** | Undo the last move |
+| **esc** | Clear the search, or close when there is none |
 
 Every action works on **the selection, or the focused window when nothing is
 selected** — so you can aim at one window and act on it without selecting first.
@@ -57,6 +81,25 @@ it — Shift is the whole selection story, on and off.
 
 The checkmark, not the tint, is what identifies a selection when windows overlap:
 the tint of a window sitting behind another necessarily paints across it.
+
+### Finding a window fast
+
+Every window wears a number. Press **1**–**9** to jump straight to it — numbers are
+global, so one key means one window no matter which display it is on.
+
+Past nine windows, **just start typing**. Matching is on both app name and window
+title, so `mail` finds Mail and `invoice` finds the document window with it in the
+title. Non-matches stay on screen but recede, so you can still see what you are
+ruling out. **⌫** edits the query, **esc** clears it.
+
+### Undo
+
+Moving a dozen windows with one keystroke deserves a way back. **⌘Z** inside the
+overview — or **Undo Last Move** in the menu bar — puts the last move's windows
+back where they were.
+
+Only moves are undoable. Full screen has its own reverse (⌫) and quitting an app is
+not something an undo could honestly reverse.
 
 ### Mouse
 
@@ -90,6 +133,21 @@ Full-screen windows are left out of the fan-out — they own their whole Space, 
 shrinking one into a grid cell fights the window server.
 
 ---
+
+## Settings
+
+**Menu bar icon → Settings…** (or ⌘, when the menu is open).
+
+Every shortcut is rebindable: click one, type the new combination, and it takes
+effect immediately. **⌫** while recording unbinds an action, **esc** cancels.
+Combinations need at least one of ⌃ ⌥ ⌘ — a bare key would swallow that key
+system-wide.
+
+If another app already owns a combination, ScreenSwap says so rather than failing
+silently, both when you pick it and at launch.
+
+**Launch at login** lives here too. It uses `SMAppService`, so macOS manages it and
+it shows up under Login Items in System Settings like any other well-behaved app.
 
 ## Requirements
 
@@ -208,6 +266,11 @@ Sources/ScreenSwap/
   DisplayManager.swift    Screen geometry and AppKit <-> CoreGraphics conversion
   PermissionsHelper.swift Accessibility checks and System Settings links
   Diagnostics.swift       Terminal verification modes
+  Preferences.swift       Shortcut storage and launch-at-login
+  Shortcut.swift          Key code + modifiers, with layout-aware display names
+  ShortcutRecorder.swift  Click-to-record shortcut field
+  PreferencesWindow.swift The settings window
+  MoveHistory.swift       One level of undo for window moves
   Log.swift               Opt-in debug logging
 ```
 

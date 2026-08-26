@@ -13,10 +13,22 @@ final class ExposeItem {
     /// The same rect in global AppKit coordinates, used for directional navigation
     /// so focus can cross from one display to the next.
     var globalFrame: CGRect = .zero
+    /// 1-9 jump key, assigned globally so a number means one window across every
+    /// display. nil past the ninth window.
+    var jumpNumber: Int?
 
     init(window: WindowInfo, screen: NSScreen) {
         self.window = window
         self.screen = screen
+    }
+
+    /// Whether this window answers to a typed filter. Both the app name and the
+    /// window title are searched, so "mail" finds Mail and "invoice" finds the
+    /// document window that has it in the title.
+    func matches(_ query: String) -> Bool {
+        guard !query.isEmpty else { return true }
+        return window.appName.localizedCaseInsensitiveContains(query)
+            || window.title.localizedCaseInsensitiveContains(query)
     }
 }
 
@@ -37,7 +49,10 @@ final class ExposeItem {
 /// - `Backspace`     → take them back out of full screen
 /// - `Space`         → swap all windows between the two displays
 /// - `Cmd`+`Q`       → quit the apps owning the selected windows
-/// - `Esc`           → close, changing nothing
+/// - `1`-`9`         → jump the cursor straight to that window
+/// - letters         → type to search by app name; the cursor follows the match
+/// - `Cmd`+`Z`       → undo the last move
+/// - `Esc`           → clear the search, or close when there is none
 ///
 /// Aim first, then pick: arrows only ever move the cursor, and Shift is a discrete
 /// tap that marks whatever the cursor is on. Sending is its own chord for the same
@@ -52,6 +67,8 @@ final class ExposeOverlayController: NSObject {
     /// Insertion-ordered so the selection grows the way the user built it.
     private var selectedIndices: [Int] = []
     private var keyMonitor: Any?
+    /// Typed-so-far app-name filter. Empty means not searching.
+    private var searchQuery = ""
     /// Previous Shift state, so a tap can be told from a hold.
     private var shiftWasDown = false
     /// What each window looked like before being spread, so it can be put back.
@@ -131,6 +148,7 @@ final class ExposeOverlayController: NSObject {
         }
 
         selectedIndices = []
+        searchQuery = ""
         lastHandledKey = nil
         // Seed from the live state so opening the overlay with Shift already held
         // does not read as a tap.
@@ -226,6 +244,10 @@ final class ExposeOverlayController: NSObject {
     /// Places each item at its window's *actual* on-screen rect. There is no grid:
     /// the point of the overlay is that your real windows stay where they are.
     private func layoutItems() {
+        for (index, item) in items.enumerated() {
+            item.jumpNumber = index < 9 ? index + 1 : nil
+        }
+
         for panel in panels {
             let screenItems = items.filter { $0.screen == panel.targetScreen }
             let origin = panel.targetScreen.frame.origin
@@ -310,7 +332,17 @@ final class ExposeOverlayController: NSObject {
 
         switch Int(event.keyCode) {
         case kVK_Escape:
-            dismiss()
+            // Back out of the search first; only close once there is nothing to back
+            // out of, so a mistyped filter does not cost you the overlay.
+            if !searchQuery.isEmpty {
+                setSearch("")
+            } else {
+                dismiss()
+            }
+            return true
+
+        case kVK_ANSI_Z where flags == [.command]:
+            performUndo()
             return true
 
         case kVK_Return, kVK_ANSI_KeypadEnter:
@@ -330,7 +362,13 @@ final class ExposeOverlayController: NSObject {
 
         case kVK_Delete:
             guard flags.isEmpty else { return true }
-            exitFullscreenTargets()
+            // While searching, Backspace edits the query; otherwise it is the
+            // reverse of Enter.
+            if searchQuery.isEmpty {
+                exitFullscreenTargets()
+            } else {
+                setSearch(String(searchQuery.dropLast()))
+            }
             return true
 
         case kVK_LeftArrow, kVK_RightArrow, kVK_UpArrow, kVK_DownArrow:
@@ -354,6 +392,7 @@ final class ExposeOverlayController: NSObject {
             return true
 
         default:
+            handleTypedKey(event, flags: flags)
             return true   // Swallow everything else so stray keys cannot leak through.
         }
     }
@@ -394,6 +433,66 @@ final class ExposeOverlayController: NSObject {
 
         let moved = WindowSwapper.swapAllWindowsBetweenTheTwoDisplays()
         Self.debug("full swap moved \(moved) windows")
+    }
+
+    /// Digits jump straight to a window; letters build up a name filter.
+    ///
+    /// Digits win over the filter even mid-search: app names rarely hinge on a
+    /// leading number, and losing the one-key jump would cost more than it gains.
+    private func handleTypedKey(_ event: NSEvent, flags: NSEvent.ModifierFlags) {
+        guard flags.isEmpty, let characters = event.charactersIgnoringModifiers, !characters.isEmpty else { return }
+
+        if let digit = Int(characters), (1...9).contains(digit) {
+            jumpToIndex(digit - 1)
+            return
+        }
+
+        // Letters, digits 0, spaces inside a name, and so on.
+        guard let scalar = characters.unicodeScalars.first,
+              CharacterSet.alphanumerics.contains(scalar) || scalar == "." || scalar == "-" else { return }
+        setSearch(searchQuery + characters)
+    }
+
+    /// Focus the window wearing that number. Numbers are global, so one key means
+    /// one window no matter which display it is on.
+    private func jumpToIndex(_ index: Int) {
+        guard index < items.count else {
+            NSSound.beep()
+            return
+        }
+        focusedIndex = index
+        redraw()
+    }
+
+    /// Applies a name filter and moves the cursor to the first match.
+    private func setSearch(_ query: String) {
+        searchQuery = query
+        for panel in panels {
+            panel.gridView.searchQuery = query
+        }
+
+        if !query.isEmpty {
+            if let match = items.firstIndex(where: { $0.matches(query) }) {
+                focusedIndex = match
+            } else {
+                NSSound.beep()
+            }
+        }
+        redraw()
+    }
+
+    private func performUndo() {
+        guard MoveHistory.canUndo else {
+            NSSound.beep()
+            return
+        }
+        // Put the fan-out back first, so undo writes onto real geometry rather than
+        // fighting the temporary layout.
+        let saved = restorations
+        dismiss(restoringWindows: false)
+        WindowArranger.restore(saved)
+        restorations = []
+        MoveHistory.undo()
     }
 
     /// What an action applies to: the selection when there is one, otherwise
@@ -541,6 +640,10 @@ final class ExposeOverlayController: NSObject {
         selectedIndices = selectedIndices.compactMap { indexMap[$0] }
         focusedIndex = focusedIndex.flatMap { indexMap[$0] } ?? (items.isEmpty ? nil : 0)
 
+        // Keep the badges contiguous after windows drop out.
+        for (index, item) in items.enumerated() {
+            item.jumpNumber = index < 9 ? index + 1 : nil
+        }
         refreshPanelItems()
         redraw()
     }
@@ -786,6 +889,7 @@ final class ExposeGridView: NSView {
     weak var controller: ExposeOverlayController?
     var items: [ExposeItem] = []
     var screenName: String = ""
+    var searchQuery = ""
 
     private var mouseDownItem: ExposeItem?
     private var mouseDownLocation: NSPoint = .zero
@@ -818,6 +922,14 @@ final class ExposeGridView: NSView {
 
         let isFocused = controller?.isFocused(item) ?? false
         let isSelected = controller?.isSelected(item) ?? false
+        let isMatch = item.matches(searchQuery)
+
+        // While filtering, non-matches stay visible but recede, so the shape of the
+        // screen is preserved and you can still see what you are ruling out.
+        if !isMatch {
+            NSColor.black.withAlphaComponent(0.45).setFill()
+            NSBezierPath(roundedRect: rect, xRadius: Self.cornerRadius, yRadius: Self.cornerRadius).fill()
+        }
 
         let path = NSBezierPath(roundedRect: rect.insetBy(dx: 1.5, dy: 1.5),
                                 xRadius: Self.cornerRadius,
@@ -851,7 +963,8 @@ final class ExposeGridView: NSView {
             ring.stroke()
         }
 
-        drawBadge(for: item, in: rect, isSelected: isSelected, isFocused: isFocused)
+        drawBadge(for: item, in: rect, isSelected: isSelected, isFocused: isFocused,
+                  number: item.jumpNumber, dimmed: !isMatch)
         if isSelected {
             drawCheckmark(in: rect)
         }
@@ -886,8 +999,9 @@ final class ExposeGridView: NSView {
     }
 
     /// App-name badge, pinned inside the top edge of the window it labels.
-    private func drawBadge(for item: ExposeItem, in rect: NSRect, isSelected: Bool, isFocused: Bool) {
-        let name = item.window.appName
+    private func drawBadge(for item: ExposeItem, in rect: NSRect, isSelected: Bool,
+                           isFocused: Bool, number: Int?, dimmed: Bool) {
+        let name = number.map { "\($0)  \(item.window.appName)" } ?? item.window.appName
         let attributes: [NSAttributedString.Key: Any] = [
             .font: NSFont.systemFont(ofSize: 13, weight: .semibold),
             .foregroundColor: NSColor.white
@@ -907,6 +1021,8 @@ final class ExposeGridView: NSView {
             fill = .systemBlue
         } else if isFocused {
             fill = NSColor.black.withAlphaComponent(0.85)
+        } else if dimmed {
+            fill = NSColor.black.withAlphaComponent(0.5)
         } else {
             fill = NSColor.black.withAlphaComponent(0.65)
         }
@@ -920,15 +1036,36 @@ final class ExposeGridView: NSView {
         NSGraphicsContext.restoreGraphicsState()
     }
 
+    /// The live filter, shown above the legend while typing.
+    private func drawSearchField() {
+        let text = "\u{2315}  \(searchQuery)"
+        let attributes: [NSAttributedString.Key: Any] = [
+            .font: NSFont.systemFont(ofSize: 15, weight: .medium),
+            .foregroundColor: NSColor.white
+        ]
+        let size = text.size(withAttributes: attributes)
+        let pill = NSRect(x: bounds.midX - size.width / 2 - 18,
+                          y: 128,
+                          width: size.width + 36,
+                          height: size.height + 18)
+
+        NSColor.systemBlue.withAlphaComponent(0.9).setFill()
+        NSBezierPath(roundedRect: pill, xRadius: pill.height / 2, yRadius: pill.height / 2).fill()
+        text.draw(at: NSPoint(x: pill.midX - size.width / 2, y: pill.minY + 9), withAttributes: attributes)
+    }
+
     private func drawFooter() {
         let selectionCount = controller?.selectionCount ?? 0
 
         // Two lines: what acts on the target, then how to aim and get out. One line
         // stopped fitting once full screen and quit joined the set.
-        let actions = "⌘ + arrows Send   ·   ↵ Full screen   ·   ⌫ Exit full screen   ·   ⌘Q Quit app   ·   space Swap all"
+        let actions = "⌘ + arrows Send   ·   ↵ Full screen   ·   ⌫ Exit full screen   ·   ⌘Q Quit app   ·   space Swap all   ·   ⌘Z Undo"
+        if !searchQuery.isEmpty {
+            drawSearchField()
+        }
         let navigation = selectionCount > 0
             ? "\(selectionCount) selected   ·   Arrows Aim   ·   ⇧ Select / deselect   ·   esc Cancel"
-            : "Arrows Aim   ·   ⇧ Select / deselect   ·   esc Cancel"
+            : "Arrows Aim   ·   1-9 Jump   ·   Type to search   ·   ⇧ Select / deselect   ·   esc Cancel"
 
         let actionAttributes: [NSAttributedString.Key: Any] = [
             .font: NSFont.systemFont(ofSize: 13, weight: .medium),

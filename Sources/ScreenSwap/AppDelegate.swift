@@ -1,17 +1,27 @@
 import AppKit
 import Carbon.HIToolbox
 
-final class AppDelegate: NSObject, NSApplicationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
+
+    static private(set) var shared: AppDelegate?
 
     private var statusItem: NSStatusItem?
-    private var overlayHotkeyID: UInt32?
     private var permissionPollTimer: Timer?
+    /// Actions whose shortcut could not be registered, usually because another app
+    /// already owns the combination.
+    private var failedActions: Set<Preferences.Action> = []
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        AppDelegate.shared = self
         NSApp.setActivationPolicy(.accessory)
 
         setUpStatusItem()
         setUpHotkeys()
+
+        NotificationCenter.default.addObserver(self,
+                                               selector: #selector(setUpHotkeys),
+                                               name: .screenSwapShortcutsChanged,
+                                               object: nil)
 
         // Accessibility gates every window operation. Registering the hotkey first
         // means the app is usable the instant permission lands.
@@ -69,6 +79,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    // MARK: - Menu
+
+    /// Refreshed each time the menu opens, so shortcut hints and the undo item stay
+    /// truthful after the user edits settings or performs a move.
+    func menuNeedsUpdate(_ menu: NSMenu) {
+        for item in menu.items {
+            switch item.action {
+            case #selector(showOverlay):
+                item.setShortcutHint(Preferences.shortcut(for: .overlay))
+            case #selector(undoLastMove):
+                item.isEnabled = MoveHistory.canUndo
+                item.title = MoveHistory.lastAction.map { "Undo \($0)" } ?? "Undo Last Move"
+            default:
+                break
+            }
+        }
+    }
+
     // MARK: - Permission polling
 
     /// Watches for Accessibility being granted so the user does not have to relaunch.
@@ -93,30 +121,46 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let granted = PermissionsHelper.hasAccessibilityPermission
         statusItem?.button?.alphaValue = granted ? 1.0 : 0.4
         statusItem?.button?.toolTip = granted
-            ? "ScreenSwap — press ⌃⌥↑ for the window overview"
+            ? "ScreenSwap — press \(Preferences.shortcut(for: .overlay)?.displayString ?? "the overlay shortcut") for the window overview"
             : "ScreenSwap — needs Accessibility permission"
     }
 
     // MARK: - Hotkeys
 
-    private func setUpHotkeys() {
-        // ⌃⌥↑ — the app's single entry point.
-        //
-        // Deliberately *not* Control+Up: that is system Mission Control, and adding
-        // Option keeps us clear of it.
-        overlayHotkeyID = HotkeyManager.shared.register(
-            keyCode: kVK_UpArrow,
-            modifiers: [.control, .option]
-        ) {
-            ExposeOverlayController.shared.toggle()
+    /// (Re-)registers every configured shortcut. Safe to call again after the user
+    /// edits one; everything is torn down and rebuilt.
+    @objc private func setUpHotkeys() {
+        HotkeyManager.shared.unregisterAll()
+        failedActions = []
+
+        for action in Preferences.Action.allCases {
+            guard let shortcut = Preferences.shortcut(for: action) else { continue }
+
+            let registered = HotkeyManager.shared.register(keyCode: shortcut.keyCode,
+                                                           modifiers: shortcut.hotkeyModifiers) {
+                AppDelegate.perform(action)
+            }
+            if registered == nil {
+                failedActions.insert(action)
+                Log.debug("hotkey unavailable for \(action.rawValue): \(shortcut.displayString)")
+            }
         }
 
-        if overlayHotkeyID == nil {
+        if !failedActions.isEmpty {
             presentHotkeyFailureAlert()
         }
+        updateStatusItemAppearance()
+    }
 
-        // Note: ⌃⌥⌘S ("swap all windows") is intentionally NOT registered as a
-        // global hotkey any more. That action now lives on Enter inside the overlay.
+    func unavailableShortcutActions() -> Set<Preferences.Action> { failedActions }
+
+    private static func perform(_ action: Preferences.Action) {
+        if let direction = action.direction {
+            // Straight to the point: no overlay, no fan-out, just move the window.
+            WindowSwapper.moveFocusedWindow(direction)
+        } else {
+            ExposeOverlayController.shared.toggle()
+        }
     }
 
     // MARK: - Status item
@@ -133,9 +177,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                                      action: #selector(showOverlay),
                                      keyEquivalent: "")
         overlayItem.target = self
-        // Display-only: the real binding is the global hotkey registered above.
-        overlayItem.keyEquivalent = "\u{F700}"   // Up arrow glyph
-        overlayItem.keyEquivalentModifierMask = [.control, .option]
         menu.addItem(overlayItem)
 
         let swapItem = NSMenuItem(title: "Swap All Windows Between Displays",
@@ -144,7 +185,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         swapItem.target = self
         menu.addItem(swapItem)
 
+        let undoItem = NSMenuItem(title: "Undo Last Move",
+                                  action: #selector(undoLastMove),
+                                  keyEquivalent: "")
+        undoItem.target = self
+        menu.addItem(undoItem)
+
         menu.addItem(.separator())
+
+        let settingsItem = NSMenuItem(title: "Settings…",
+                                      action: #selector(showSettings),
+                                      keyEquivalent: ",")
+        settingsItem.target = self
+        menu.addItem(settingsItem)
 
         let permissionsItem = NSMenuItem(title: "Permissions…",
                                          action: #selector(showPermissions),
@@ -161,6 +214,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                                   keyEquivalent: "")
         menu.addItem(quitItem)
 
+        menu.delegate = self
         item.menu = menu
         statusItem = item
         updateStatusItemAppearance()
@@ -174,6 +228,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func swapAllWindows() {
         WindowSwapper.swapAllWindowsBetweenTheTwoDisplays()
+    }
+
+    @objc private func undoLastMove() {
+        MoveHistory.undo()
+    }
+
+    @objc private func showSettings() {
+        PreferencesWindowController.shared.show()
     }
 
     @objc private func showPermissions() {
@@ -197,16 +259,43 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func presentHotkeyFailureAlert() {
+        let names = failedActions
+            .map { "\($0.title) (\(Preferences.shortcut(for: $0)?.displayString ?? "?"))" }
+            .sorted()
+            .joined(separator: "\n")
+
         let alert = NSAlert()
         alert.alertStyle = .warning
-        alert.messageText = "Could not register ⌃⌥↑"
+        alert.messageText = "Some shortcuts are unavailable"
         alert.informativeText = """
-        Another app or a system shortcut has already claimed Control+Option+Up Arrow.
+        Another app or a system shortcut already claims:
 
-        Free it up and relaunch ScreenSwap, or use the menu bar icon to open the overlay.
+        \(names)
+
+        Pick different combinations in Settings, or free them up and relaunch.
         """
-        alert.addButton(withTitle: "OK")
+        alert.addButton(withTitle: "Open Settings")
+        alert.addButton(withTitle: "Later")
         NSApp.activate(ignoringOtherApps: true)
-        alert.runModal()
+        if alert.runModal() == .alertFirstButtonReturn {
+            PreferencesWindowController.shared.show()
+        }
+    }
+}
+
+private extension NSMenuItem {
+    /// Shows a shortcut next to a menu item without letting AppKit claim it: these
+    /// are global hotkeys, and a real key equivalent would fire twice.
+    func setShortcutHint(_ shortcut: Shortcut?) {
+        guard let shortcut else {
+            attributedTitle = nil
+            return
+        }
+        let base = title
+        let text = NSMutableAttributedString(string: base + "   ")
+        text.append(NSAttributedString(string: shortcut.displayString, attributes: [
+            .foregroundColor: NSColor.secondaryLabelColor
+        ]))
+        attributedTitle = text
     }
 }
