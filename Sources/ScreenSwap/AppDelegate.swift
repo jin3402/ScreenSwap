@@ -83,7 +83,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         for item in menu.items {
             switch item.action {
             case #selector(showOverlay):
-                item.setShortcutHint(Preferences.shortcut(for: .overlay))
+                item.setShortcutHint(base: L("Window Overview"),
+                                     shortcut: Preferences.shortcut(for: .overlay))
             case #selector(undoLastMove):
                 item.isEnabled = MoveHistory.canUndo
                 item.title = MoveHistory.lastAction.map { L("Undo %@", $0) } ?? L("Undo Last Move")
@@ -285,12 +286,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 private extension NSMenuItem {
     /// Shows a shortcut next to a menu item without letting AppKit claim it: these
     /// are global hotkeys, and a real key equivalent would fire twice.
-    func setShortcutHint(_ shortcut: Shortcut?) {
+    ///
+    /// The base title must be passed in rather than read from `title`: setting
+    /// `attributedTitle` writes through to `title`, so rebuilding from it appended
+    /// another copy of the shortcut every time the menu opened.
+    func setShortcutHint(base: String, shortcut: Shortcut?) {
         guard let shortcut else {
             attributedTitle = nil
+            title = base
             return
         }
-        let base = title
         let text = NSMutableAttributedString(string: base + "   ")
         text.append(NSAttributedString(string: shortcut.displayString, attributes: [
             .foregroundColor: NSColor.secondaryLabelColor
