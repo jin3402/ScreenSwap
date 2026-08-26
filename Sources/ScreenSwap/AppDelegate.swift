@@ -56,19 +56,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         guard let snapshots = WindowArranger.pendingRestore() else { return }
 
         let count = snapshots.count
-        let subject = count == 1 ? "1 window was" : "\(count) windows were"
-        let pronoun = count == 1 ? "it was" : "they were"
+        let subject = count == 1 ? L("1 window was") : L("%d windows were", count)
+        let pronoun = count == 1 ? L("it was") : L("they were")
 
         let alert = NSAlert()
         alert.alertStyle = .warning
-        alert.messageText = "Restore your window layout?"
-        alert.informativeText = """
-        ScreenSwap quit while \(subject) spread out for the window overview, so \(pronoun) never put back.
-
-        Restore them to where they were? If you have rearranged things since, choose Leave As Is.
-        """
-        alert.addButton(withTitle: "Restore")
-        alert.addButton(withTitle: "Leave As Is")
+        alert.messageText = L("Restore your window layout?")
+        alert.informativeText = L("ScreenSwap quit while %@ spread out for the window overview, so %@ never put back.\n\nRestore them to where they were? If you have rearranged things since, choose Leave As Is.", subject, pronoun)
+        alert.addButton(withTitle: L("Restore"))
+        alert.addButton(withTitle: L("Leave As Is"))
 
         NSApp.activate(ignoringOtherApps: true)
         if alert.runModal() == .alertFirstButtonReturn {
@@ -90,7 +86,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 item.setShortcutHint(Preferences.shortcut(for: .overlay))
             case #selector(undoLastMove):
                 item.isEnabled = MoveHistory.canUndo
-                item.title = MoveHistory.lastAction.map { "Undo \($0)" } ?? "Undo Last Move"
+                item.title = MoveHistory.lastAction.map { L("Undo %@", $0) } ?? L("Undo Last Move")
             default:
                 break
             }
@@ -121,8 +117,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let granted = PermissionsHelper.hasAccessibilityPermission
         statusItem?.button?.alphaValue = granted ? 1.0 : 0.4
         statusItem?.button?.toolTip = granted
-            ? "ScreenSwap — press \(Preferences.shortcut(for: .overlay)?.displayString ?? "the overlay shortcut") for the window overview"
-            : "ScreenSwap — needs Accessibility permission"
+            ? L("ScreenSwap — press %@ for the window overview",
+                Preferences.shortcut(for: .overlay)?.displayString ?? L("the overlay shortcut"))
+            : L("ScreenSwap — needs Accessibility permission")
     }
 
     // MARK: - Hotkeys
@@ -173,19 +170,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         let menu = NSMenu()
 
-        let overlayItem = NSMenuItem(title: "Window Overview",
+        let overlayItem = NSMenuItem(title: L("Window Overview"),
                                      action: #selector(showOverlay),
                                      keyEquivalent: "")
         overlayItem.target = self
         menu.addItem(overlayItem)
 
-        let swapItem = NSMenuItem(title: "Swap All Windows Between Displays",
+        let swapItem = NSMenuItem(title: L("Swap All Windows Between Displays"),
                                   action: #selector(swapAllWindows),
                                   keyEquivalent: "")
         swapItem.target = self
         menu.addItem(swapItem)
 
-        let undoItem = NSMenuItem(title: "Undo Last Move",
+        let undoItem = NSMenuItem(title: L("Undo Last Move"),
                                   action: #selector(undoLastMove),
                                   keyEquivalent: "")
         undoItem.target = self
@@ -193,13 +190,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         menu.addItem(.separator())
 
-        let settingsItem = NSMenuItem(title: "Settings…",
+        let guideItem = NSMenuItem(title: L("Shortcut Guide…"),
+                                   action: #selector(showShortcutGuide),
+                                   keyEquivalent: "")
+        guideItem.target = self
+        menu.addItem(guideItem)
+
+        let settingsItem = NSMenuItem(title: L("Settings…"),
                                       action: #selector(showSettings),
                                       keyEquivalent: ",")
         settingsItem.target = self
         menu.addItem(settingsItem)
 
-        let permissionsItem = NSMenuItem(title: "Permissions…",
+        let permissionsItem = NSMenuItem(title: L("Permissions…"),
                                          action: #selector(showPermissions),
                                          keyEquivalent: "")
         permissionsItem.target = self
@@ -209,7 +212,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         // No "q" key equivalent: inside the overlay ⌘Q quits the *selected* app, and
         // a menu key equivalent would race the overlay for that chord.
-        let quitItem = NSMenuItem(title: "Quit ScreenSwap",
+        let quitItem = NSMenuItem(title: L("Quit ScreenSwap"),
                                   action: #selector(NSApplication.terminate(_:)),
                                   keyEquivalent: "")
         menu.addItem(quitItem)
@@ -234,6 +237,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         MoveHistory.undo()
     }
 
+    @objc private func showShortcutGuide() {
+        ShortcutGuideWindowController.shared.show()
+    }
+
     @objc private func showSettings() {
         PreferencesWindowController.shared.show()
     }
@@ -243,14 +250,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         let alert = NSAlert()
         alert.alertStyle = .informational
-        alert.messageText = "ScreenSwap Permissions"
-        alert.informativeText = """
-        Accessibility: \(granted ? "Granted" : "Not granted")
-
-        ScreenSwap needs this to move windows between your displays. It is the only permission the app uses.
-        """
-        alert.addButton(withTitle: "Open System Settings")
-        alert.addButton(withTitle: "Close")
+        alert.messageText = L("ScreenSwap Permissions")
+        alert.informativeText = L("Accessibility: %@", granted ? L("Granted") : L("Not granted"))
+            + "\n\n"
+            + L("ScreenSwap needs this to move windows between your displays. It is the only permission the app uses.")
+        alert.addButton(withTitle: L("Open System Settings"))
+        alert.addButton(withTitle: L("Close"))
 
         NSApp.activate(ignoringOtherApps: true)
         if alert.runModal() == .alertFirstButtonReturn {
@@ -260,22 +265,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     private func presentHotkeyFailureAlert() {
         let names = failedActions
-            .map { "\($0.title) (\(Preferences.shortcut(for: $0)?.displayString ?? "?"))" }
+            .map { "\(L($0.title)) (\(Preferences.shortcut(for: $0)?.displayString ?? "?"))" }
             .sorted()
             .joined(separator: "\n")
 
         let alert = NSAlert()
         alert.alertStyle = .warning
-        alert.messageText = "Some shortcuts are unavailable"
-        alert.informativeText = """
-        Another app or a system shortcut already claims:
-
-        \(names)
-
-        Pick different combinations in Settings, or free them up and relaunch.
-        """
-        alert.addButton(withTitle: "Open Settings")
-        alert.addButton(withTitle: "Later")
+        alert.messageText = L("Some shortcuts are unavailable")
+        alert.informativeText = L("Another app or a system shortcut already claims:\n\n%@\n\nPick different combinations in Settings, or free them up and relaunch.", names)
+        alert.addButton(withTitle: L("Open Settings"))
+        alert.addButton(withTitle: L("Later"))
         NSApp.activate(ignoringOtherApps: true)
         if alert.runModal() == .alertFirstButtonReturn {
             PreferencesWindowController.shared.show()

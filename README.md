@@ -134,6 +134,12 @@ shrinking one into a grid cell fights the window server.
 
 ---
 
+## Shortcut guide
+
+**Menu bar icon → Shortcut Guide…** opens a one-page reference for every key. The
+global section reads live from your settings, so it shows what is actually bound
+rather than the defaults.
+
 ## Settings
 
 **Menu bar icon → Settings…** (or ⌘, when the menu is open).
@@ -148,6 +154,14 @@ silently, both when you pick it and at launch.
 
 **Launch at login** lives here too. It uses `SMAppService`, so macOS manages it and
 it shows up under Login Items in System Settings like any other well-behaved app.
+
+## Language
+
+ScreenSwap ships in English and Korean and follows your system language. Adding
+another is a matter of dropping a `Resources/<code>.lproj/Localizable.strings`
+beside the existing ones — `build_app.sh` installs whatever it finds. English text
+doubles as the lookup key, so an unbundled development build simply falls back to
+English.
 
 ## Requirements
 
@@ -271,7 +285,12 @@ Sources/ScreenSwap/
   ShortcutRecorder.swift  Click-to-record shortcut field
   PreferencesWindow.swift The settings window
   MoveHistory.swift       One level of undo for window moves
+  ShortcutGuideWindow.swift  The read-only key reference
+  Localization.swift      Bundle string lookup
   Log.swift               Opt-in debug logging
+
+Resources/
+  en.lproj, ko.lproj      Localizable.strings, installed by build_app.sh
 ```
 
 Two coordinate spaces are in play throughout, and mixing them up is the classic

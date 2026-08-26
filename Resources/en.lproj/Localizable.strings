@@ -1,0 +1,93 @@
+/* Menu bar */
+"Window Overview" = "Window Overview";
+"Swap All Windows Between Displays" = "Swap All Windows Between Displays";
+"Undo Last Move" = "Undo Last Move";
+"Undo %@" = "Undo %@";
+"Shortcut Guide…" = "Shortcut Guide…";
+"Settings…" = "Settings…";
+"Permissions…" = "Permissions…";
+"Quit ScreenSwap" = "Quit ScreenSwap";
+
+/* Move descriptions, shown in the undo menu item */
+"swap all windows" = "swap all windows";
+"send %@ %@" = "send %@ %@";
+"send to %@" = "send to %@";
+"left" = "left";
+"right" = "right";
+"up" = "up";
+"down" = "down";
+
+/* Permissions */
+"ScreenSwap Permissions" = "ScreenSwap Permissions";
+"Accessibility: %@" = "Accessibility: %@";
+"Granted" = "Granted";
+"Not granted" = "Not granted";
+"ScreenSwap needs this to move windows between your displays. It is the only permission the app uses." = "ScreenSwap needs this to move windows between your displays. It is the only permission the app uses.";
+"Open System Settings" = "Open System Settings";
+"Close" = "Close";
+"Quit" = "Quit";
+"ScreenSwap needs Accessibility access" = "ScreenSwap needs Accessibility access";
+"ScreenSwap moves windows between your displays, which requires Accessibility permission.\n\nOpen System Settings > Privacy & Security > Accessibility, enable ScreenSwap, then launch it again." = "ScreenSwap moves windows between your displays, which requires Accessibility permission.\n\nOpen System Settings > Privacy & Security > Accessibility, enable ScreenSwap, then launch it again.";
+
+/* Hotkey conflicts */
+"Some shortcuts are unavailable" = "Some shortcuts are unavailable";
+"Another app or a system shortcut already claims:\n\n%@\n\nPick different combinations in Settings, or free them up and relaunch." = "Another app or a system shortcut already claims:\n\n%@\n\nPick different combinations in Settings, or free them up and relaunch.";
+"Open Settings" = "Open Settings";
+"Later" = "Later";
+"%@ is already used by “%@”." = "%@ is already used by “%@”.";
+"Another app is already using %@." = "Another app is already using %@.";
+"that shortcut" = "that shortcut";
+
+/* Restore after unclean exit */
+"Restore your window layout?" = "Restore your window layout?";
+"ScreenSwap quit while %@ spread out for the window overview, so %@ never put back.\n\nRestore them to where they were? If you have rearranged things since, choose Leave As Is." = "ScreenSwap quit while %@ spread out for the window overview, so %@ never put back.\n\nRestore them to where they were? If you have rearranged things since, choose Leave As Is.";
+"1 window was" = "1 window was";
+"%d windows were" = "%d windows were";
+"it was" = "it was";
+"they were" = "they were";
+"Restore" = "Restore";
+"Leave As Is" = "Leave As Is";
+
+/* Settings */
+"ScreenSwap Settings" = "ScreenSwap Settings";
+"Shortcuts" = "Shortcuts";
+"General" = "General";
+"Launch ScreenSwap at login" = "Launch ScreenSwap at login";
+"Click a shortcut to change it. Press ⌫ while recording to unbind, esc to cancel.\nEvery shortcut needs at least one of ⌃ ⌥ ⌘." = "Click a shortcut to change it. Press ⌫ while recording to unbind, esc to cancel.\nEvery shortcut needs at least one of ⌃ ⌥ ⌘.";
+"Restore Defaults" = "Restore Defaults";
+"Type a shortcut…" = "Type a shortcut…";
+"Click to set" = "Click to set";
+
+/* Actions */
+"Open window overview" = "Open window overview";
+"Send window left" = "Send window left";
+"Send window right" = "Send window right";
+"Send window up" = "Send window up";
+"Send window down" = "Send window down";
+"Fan every window out to aim, select and act" = "Fan every window out to aim, select and act";
+"Move the frontmost window one display over, without the overview" = "Move the frontmost window one display over, without the overview";
+
+/* Status item tooltips */
+"ScreenSwap — press %@ for the window overview" = "ScreenSwap — press %@ for the window overview";
+"ScreenSwap — needs Accessibility permission" = "ScreenSwap — needs Accessibility permission";
+"the overlay shortcut" = "the overlay shortcut";
+
+/* Shortcut guide */
+"ScreenSwap Shortcuts" = "ScreenSwap Shortcuts";
+"Global" = "Global";
+"Inside the overview" = "Inside the overview";
+"Aim the focus cursor (never moves a window)" = "Aim the focus cursor (never moves a window)";
+"Select or deselect the focused window" = "Select or deselect the focused window";
+"Send the selection to that display" = "Send the selection to that display";
+"Full screen" = "Full screen";
+"Exit full screen" = "Exit full screen";
+"Quit the selected window's app" = "Quit the selected window's app";
+"Swap all windows between displays" = "Swap all windows between displays";
+"Jump straight to a window" = "Jump straight to a window";
+"Search by app name or title" = "Search by app name or title";
+"Undo the last move" = "Undo the last move";
+"Clear the search, or close" = "Clear the search, or close";
+"Type letters" = "Type letters";
+"Arrows" = "Arrows";
+"Not set" = "Not set";
+"Every action applies to the selection, or to the focused window when nothing is selected." = "Every action applies to the selection, or to the focused window when nothing is selected.";

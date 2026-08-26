@@ -41,14 +41,10 @@ enum PermissionsHelper {
     static func presentAccessibilityAlert() {
         let alert = NSAlert()
         alert.alertStyle = .warning
-        alert.messageText = "ScreenSwap needs Accessibility access"
-        alert.informativeText = """
-        ScreenSwap moves windows between your displays, which requires Accessibility permission.
-
-        Open System Settings > Privacy & Security > Accessibility, enable ScreenSwap, then launch it again.
-        """
-        alert.addButton(withTitle: "Open System Settings")
-        alert.addButton(withTitle: "Quit")
+        alert.messageText = L("ScreenSwap needs Accessibility access")
+        alert.informativeText = L("ScreenSwap moves windows between your displays, which requires Accessibility permission.\n\nOpen System Settings > Privacy & Security > Accessibility, enable ScreenSwap, then launch it again.")
+        alert.addButton(withTitle: L("Open System Settings"))
+        alert.addButton(withTitle: L("Quit"))
 
         NSApp.activate(ignoringOtherApps: true)
         if alert.runModal() == .alertFirstButtonReturn {

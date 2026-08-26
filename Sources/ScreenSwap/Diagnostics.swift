@@ -13,6 +13,7 @@ enum Diagnostics {
 
     static func run(arguments: [String]) {
         printPermissions()
+        printLocalization()
         printDisplays()
         printDirectionalMap()
         printWindows()
@@ -35,6 +36,13 @@ enum Diagnostics {
         if !PermissionsHelper.hasAccessibilityPermission {
             print("  -> Windows cannot be moved until Accessibility is granted.")
         }
+    }
+
+    private static func printLocalization() {
+        section("Localization")
+        line("available   ", Bundle.main.localizations.joined(separator: ", "))
+        line("resolved to ", Bundle.main.preferredLocalizations.joined(separator: ", "))
+        line("sample      ", "\"Window Overview\" -> \"\(L("Window Overview"))\"")
     }
 
     private static func printDisplays() {

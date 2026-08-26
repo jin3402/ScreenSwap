@@ -15,6 +15,7 @@ enum Direction {
         }
     }
 
+    /// Untranslated, for logs.
     var label: String {
         switch self {
         case .left:  return "left"
@@ -23,6 +24,9 @@ enum Direction {
         case .down:  return "down"
         }
     }
+
+    /// Translated, for anything the user reads.
+    var localizedLabel: String { L(label) }
 }
 
 /// Screen enumeration plus the AppKit <-> CoreGraphics coordinate bridging that

@@ -45,7 +45,7 @@ enum WindowSwapper {
             }
         }
 
-        MoveHistory.record(toSecond + toFirst, action: "swap all windows")
+        MoveHistory.record(toSecond + toFirst, action: L("swap all windows"))
 
         let all = WindowManager.listAllWindows()
         Log.debug("swap: \(all.count) windows on screen, \(windows.count) movable")
@@ -82,7 +82,7 @@ enum WindowSwapper {
     /// ⌘+arrow "send selection" action.
     @discardableResult
     static func move(_ windows: [WindowInfo], to screen: NSScreen) -> Int {
-        MoveHistory.record(windows, action: "send to \(DisplayManager.name(of: screen))")
+        MoveHistory.record(windows, action: L("send to %@", DisplayManager.name(of: screen)))
         var moved = 0
         for window in windows where WindowManager.moveWindow(window, to: screen) { moved += 1 }
         return moved
@@ -116,7 +116,7 @@ enum WindowSwapper {
             return false
         }
 
-        MoveHistory.record([window], action: "send \(window.appName) \(direction.label)")
+        MoveHistory.record([window], action: L("send %@ %@", window.appName, direction.localizedLabel))
         let moved = WindowManager.moveWindow(window, to: target)
         Log.debug("quick move \(direction.label): \(window.appName) -> \(DisplayManager.name(of: target)) \(moved ? "ok" : "FAILED")")
         if !moved { NSSound.beep() }

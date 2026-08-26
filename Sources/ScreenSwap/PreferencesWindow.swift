@@ -13,7 +13,7 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate {
                               styleMask: [.titled, .closable],
                               backing: .buffered,
                               defer: false)
-        window.title = "ScreenSwap Settings"
+        window.title = L("ScreenSwap Settings")
         window.isReleasedWhenClosed = false
         super.init(window: window)
         window.delegate = self
@@ -54,7 +54,7 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate {
             stack.bottomAnchor.constraint(lessThanOrEqualTo: content.bottomAnchor)
         ])
 
-        stack.addArrangedSubview(heading("Shortcuts"))
+        stack.addArrangedSubview(heading(L("Shortcuts")))
 
         for action in Preferences.Action.allCases {
             stack.addArrangedSubview(row(for: action))
@@ -67,21 +67,21 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate {
         conflictLabel = conflict
 
         stack.addArrangedSubview(separator())
-        stack.addArrangedSubview(heading("General"))
+        stack.addArrangedSubview(heading(L("General")))
 
-        let launch = NSButton(checkboxWithTitle: "Launch ScreenSwap at login",
+        let launch = NSButton(checkboxWithTitle: L("Launch ScreenSwap at login"),
                               target: self,
                               action: #selector(toggleLaunchAtLogin(_:)))
         launch.state = Preferences.launchAtLogin ? .on : .off
         launch.identifier = NSUserInterfaceItemIdentifier("launchAtLogin")
         stack.addArrangedSubview(launch)
 
-        let hint = NSTextField(labelWithString: "Click a shortcut to change it. Press ⌫ while recording to unbind, esc to cancel.\nEvery shortcut needs at least one of ⌃ ⌥ ⌘.")
+        let hint = NSTextField(labelWithString: L("Click a shortcut to change it. Press ⌫ while recording to unbind, esc to cancel.\nEvery shortcut needs at least one of ⌃ ⌥ ⌘."))
         hint.font = .systemFont(ofSize: 11)
         hint.textColor = .secondaryLabelColor
         stack.addArrangedSubview(hint)
 
-        let reset = NSButton(title: "Restore Defaults", target: self, action: #selector(resetDefaults))
+        let reset = NSButton(title: L("Restore Defaults"), target: self, action: #selector(resetDefaults))
         reset.bezelStyle = .rounded
         stack.addArrangedSubview(reset)
 
@@ -114,9 +114,9 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate {
         labels.alignment = .leading
         labels.spacing = 1
 
-        let title = NSTextField(labelWithString: action.title)
+        let title = NSTextField(labelWithString: L(action.title))
         title.font = .systemFont(ofSize: 13)
-        let subtitle = NSTextField(labelWithString: action.subtitle)
+        let subtitle = NSTextField(labelWithString: L(action.subtitle))
         subtitle.font = .systemFont(ofSize: 10)
         subtitle.textColor = .secondaryLabelColor
         labels.addArrangedSubview(title)
@@ -144,7 +144,7 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate {
     /// Returns false to reject the change, which leaves the recorder as it was.
     private func apply(_ shortcut: Shortcut?, to action: Preferences.Action) -> Bool {
         if let shortcut, let clash = Preferences.conflictingAction(for: shortcut, excluding: action) {
-            conflictLabel?.stringValue = "\(shortcut.displayString) is already used by “\(clash.title)”."
+            conflictLabel?.stringValue = L("%@ is already used by “%@”.", shortcut.displayString, L(clash.title))
             NSSound.beep()
             return false
         }
@@ -157,7 +157,7 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate {
         DispatchQueue.main.async { [weak self] in
             if let failed = AppDelegate.shared?.unavailableShortcutActions(), failed.contains(action) {
                 self?.conflictLabel?.stringValue =
-                    "Another app is already using \(shortcut?.displayString ?? "that shortcut")."
+                    L("Another app is already using %@.", shortcut?.displayString ?? L("that shortcut"))
             }
         }
         return true

@@ -53,13 +53,13 @@ final class ShortcutRecorderView: NSView {
         let text: String
         let color: NSColor
         if isRecording {
-            text = "Type a shortcut…"
+            text = L("Type a shortcut…")
             color = .controlAccentColor
         } else if let shortcut {
             text = shortcut.displayString
             color = .labelColor
         } else {
-            text = "Click to set"
+            text = L("Click to set")
             color = .secondaryLabelColor
         }
 

@@ -40,6 +40,13 @@ cp "$BINARY" "$MACOS/$APP_NAME"
 chmod +x "$MACOS/$APP_NAME"
 cp "$ROOT/Info.plist" "$CONTENTS/Info.plist"
 
+# Localizations. SwiftPM ignores Resources/ because it sits outside the target
+# path, so the .lproj bundles are installed here and read through Bundle.main.
+for lproj in "$ROOT"/Resources/*.lproj; do
+	[ -d "$lproj" ] || continue
+	cp -R "$lproj" "$RESOURCES/"
+done
+
 # Optional icon: drop an AppIcon.icns in Resources/ to have it picked up.
 if [ -f "$ROOT/Resources/AppIcon.icns" ]; then
 	cp "$ROOT/Resources/AppIcon.icns" "$RESOURCES/AppIcon.icns"
