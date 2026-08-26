@@ -91,3 +91,7 @@
 "Arrows" = "Arrows";
 "Not set" = "Not set";
 "Every action applies to the selection, or to the focused window when nothing is selected." = "Every action applies to the selection, or to the focused window when nothing is selected.";
+
+/* Full screen toggle */
+"Toggle full screen" = "Toggle full screen";
+"Full screen the frontmost window, or put it back to a window" = "Full screen the frontmost window, or put it back to a window";

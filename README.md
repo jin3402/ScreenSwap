@@ -20,12 +20,18 @@ wide margin, and it is one keystroke.
 **Show me everything** — ⌃⌥↑ opens the overview below, for picking several windows,
 finding one you lost, or acting on something that is not frontmost.
 
+**⌃⌥F** toggles full screen on the frontmost window. The overview can do this too
+(↵ and ⌫), but a full-screen window sits on its own Space, so getting back out of
+one would mean switching Spaces just to open the overview. This is the way out from
+inside the app itself.
+
 | Shortcut | Action |
 |---|---|
 | **⌃⌥←** | Send the frontmost window to the display on the left |
 | **⌃⌥→** | Send it to the display on the right |
 | **⌃⌥↓** | Send it to the display below |
 | **⌃⌥↑** | Open the window overview |
+| **⌃⌥F** | Full screen the frontmost window, or put it back to a window |
 
 All four are configurable — see [Settings](#settings). "Send up" ships unbound
 because ⌃⌥↑ is the overview; bind it if your displays are stacked.

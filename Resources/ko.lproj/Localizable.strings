@@ -91,3 +91,7 @@
 "Arrows" = "방향키";
 "Not set" = "미지정";
 "Every action applies to the selection, or to the focused window when nothing is selected." = "모든 동작은 선택된 창에, 선택이 없으면 포커스된 창에 적용됩니다.";
+
+/* Full screen toggle */
+"Toggle full screen" = "전체화면 전환";
+"Full screen the frontmost window, or put it back to a window" = "맨 앞 창을 전체화면으로, 또는 창 모드로 되돌립니다";

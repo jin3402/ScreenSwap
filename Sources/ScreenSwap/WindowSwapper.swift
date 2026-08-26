@@ -88,6 +88,37 @@ enum WindowSwapper {
         return moved
     }
 
+    /// Puts the frontmost window into full screen, or takes it back out.
+    ///
+    /// Deliberately a toggle rather than two actions: a full-screen window owns its
+    /// whole Space, so the only sensible thing to do to it is undo that, and one key
+    /// covering both directions is one less thing to remember.
+    @discardableResult
+    static func toggleFullScreenOfFocusedWindow() -> Bool {
+        guard PermissionsHelper.hasAccessibilityPermission else {
+            PermissionsHelper.presentAccessibilityAlert()
+            return false
+        }
+
+        let windows = WindowManager.listAllWindows()
+        guard let frontID = WindowManager.frontmostWindowID(in: windows),
+              let window = windows.first(where: { $0.windowID == frontID }),
+              window.isMovable else {
+            Log.debug("toggle full screen: no usable frontmost window")
+            NSSound.beep()
+            return false
+        }
+
+        let wasFullScreen = WindowManager.isFullScreen(window)
+        let changed = WindowManager.setFullScreen(window, !wasFullScreen)
+        Log.debug("toggle full screen: \(window.appName) \(wasFullScreen ? "exit" : "enter") \(changed ? "ok" : "FAILED")")
+        if !changed {
+            // Dialogs and some non-native windows expose no writable full-screen state.
+            NSSound.beep()
+        }
+        return changed
+    }
+
     /// Moves the frontmost window one display over without opening the overlay.
     ///
     /// This is the common case by a wide margin — "put this one over there" — and

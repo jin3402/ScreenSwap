@@ -12,6 +12,7 @@ enum Preferences {
         case sendRight
         case sendUp
         case sendDown
+        case toggleFullScreen
 
         var title: String {
             switch self {
@@ -20,6 +21,7 @@ enum Preferences {
             case .sendRight: return "Send window right"
             case .sendUp:    return "Send window up"
             case .sendDown:  return "Send window down"
+            case .toggleFullScreen: return "Toggle full screen"
             }
         }
 
@@ -29,6 +31,8 @@ enum Preferences {
                 return "Fan every window out to aim, select and act"
             case .sendLeft, .sendRight, .sendUp, .sendDown:
                 return "Move the frontmost window one display over, without the overview"
+            case .toggleFullScreen:
+                return "Full screen the frontmost window, or put it back to a window"
             }
         }
 
@@ -40,6 +44,7 @@ enum Preferences {
             case .sendRight: return .right
             case .sendUp:    return .up
             case .sendDown:  return .down
+            case .toggleFullScreen: return nil
             }
         }
 
@@ -57,6 +62,10 @@ enum Preferences {
             case .sendRight: return Shortcut(keyCode: kVK_RightArrow, carbonModifiers: controlOption)
             case .sendDown:  return Shortcut(keyCode: kVK_DownArrow, carbonModifiers: controlOption)
             case .sendUp:    return nil
+            // A full-screen window sits on its own Space, so reaching for the
+            // overview to undo it means switching Spaces first. This is the way out
+            // from inside the app itself.
+            case .toggleFullScreen: return Shortcut(keyCode: kVK_ANSI_F, carbonModifiers: controlOption)
             }
         }
 

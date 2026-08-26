@@ -153,11 +153,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     func unavailableShortcutActions() -> Set<Preferences.Action> { failedActions }
 
     private static func perform(_ action: Preferences.Action) {
-        if let direction = action.direction {
+        switch action {
+        case .overlay:
+            ExposeOverlayController.shared.toggle()
+        case .toggleFullScreen:
+            WindowSwapper.toggleFullScreenOfFocusedWindow()
+        case .sendLeft, .sendRight, .sendUp, .sendDown:
+            guard let direction = action.direction else { return }
             // Straight to the point: no overlay, no fan-out, just move the window.
             WindowSwapper.moveFocusedWindow(direction)
-        } else {
-            ExposeOverlayController.shared.toggle()
         }
     }
 
