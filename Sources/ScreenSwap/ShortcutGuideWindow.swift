@@ -80,6 +80,7 @@ final class ShortcutGuideWindowController: NSWindowController {
         let entries: [(String, String)] = [
             (L("Arrows"),       L("Aim the focus cursor (never moves a window)")),
             ("⇧",               L("Select or deselect the focused window")),
+            ("tab",             L("Bring the focused window to the front, as-is")),
             ("⌘ + ←→↑↓",        L("Send the selection to that display")),
             ("⌘2 / ⌘3 / ⌘4",    L("Split into 2, 3, or 4 tiles")),
             ("↵",               L("Full screen")),

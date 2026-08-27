@@ -357,4 +357,14 @@ enum WindowManager {
         let value: CFBoolean = fullScreen ? kCFBooleanTrue : kCFBooleanFalse
         return AXUIElementSetAttributeValue(element, attribute as CFString, value) == .success
     }
+
+    /// Brings a window to the front of its own app and activates that app, without
+    /// touching the window's size or position.
+    static func raise(_ window: WindowInfo) {
+        guard let element = window.element else { return }
+        AXUIElementPerformAction(element, kAXRaiseAction as CFString)
+        if let app = NSRunningApplication(processIdentifier: window.pid) {
+            app.activate()
+        }
+    }
 }

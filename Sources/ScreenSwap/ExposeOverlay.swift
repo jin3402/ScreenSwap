@@ -44,6 +44,9 @@ final class ExposeItem {
 ///
 /// - arrow           → move the focus cursor; never moves a window
 /// - `Shift`         → tapped on its own, selects or deselects the focused window
+/// - `Tab`           → raise the focused window to the front and activate it,
+///                      exactly as it already is — the way out when you just want
+///                      to get to work, not rearrange anything
 /// - `Cmd`+arrow     → send the selected windows to the display that way
 /// - `Cmd`+2/3/4     → tile the targets into an even 2/3/4-way split
 /// - `Enter`         → put the selected windows into full screen
@@ -351,6 +354,11 @@ final class ExposeOverlayController: NSObject {
             fullscreenTargets()
             return true
 
+        case kVK_Tab:
+            guard flags.isEmpty else { return true }
+            activateFocused()
+            return true
+
         case kVK_Space:
             guard flags.isEmpty else { return true }
             performFullSwap()
@@ -520,6 +528,28 @@ final class ExposeOverlayController: NSObject {
         return []
     }
 
+    /// Tab: bring the focused window to the front and hand it keyboard focus,
+    /// completely as-is — no resize, no full screen, nothing else moves.
+    ///
+    /// Deliberately targets only the *focused* window, never the selection: "bring
+    /// to front" only means anything for one window at a time, so this is the one
+    /// action in the overlay that ignores a multi-window selection on purpose.
+    private func activateFocused() {
+        guard let index = focusedIndex, index < items.count else {
+            NSSound.beep()
+            return
+        }
+        let window = items[index].window
+
+        let saved = restorations
+        dismiss(restoringWindows: false)
+        WindowArranger.restore(saved)
+        restorations = []
+
+        WindowManager.raise(window)
+        Self.debug("activated \(window.appName)")
+    }
+
     /// Enter: send the targets into native full screen.
     private func fullscreenTargets() {
         let targets = currentTargets()
@@ -619,9 +649,18 @@ final class ExposeOverlayController: NSObject {
             return groups
         }
 
-        guard let targetScreen = focusedIndex.flatMap({ $0 < items.count ? items[$0].screen : nil })
-            ?? DisplayManager.screenUnderMouse() else { return [] }
+        // Mouse position first, not the aim cursor's screen: unlike every other
+        // no-selection action here (quit, full screen, ...), which act on one
+        // specific, already-highlighted window, a split with nothing selected acts
+        // on an entire *display* — and the aim cursor starts wherever the frontmost
+        // app happened to be before the overlay opened, not wherever the user is
+        // actually looking. Requiring an arrow-navigate over to the target screen
+        // first, just to split it, made the feature look broken on whichever
+        // display wasn't already focused.
+        guard let targetScreen = DisplayManager.screenUnderMouse()
+            ?? focusedIndex.flatMap({ $0 < items.count ? items[$0].screen : nil }) else { return [] }
         let windows = items.filter { $0.screen == targetScreen }.map { $0.window }
+        Self.debug("split target (no selection): \(DisplayManager.name(of: targetScreen)), \(windows.count) window(s)")
         return windows.isEmpty ? [] : [(targetScreen, windows)]
     }
 
@@ -1127,7 +1166,7 @@ final class ExposeGridView: NSView {
 
         // Two lines: what acts on the target, then how to aim and get out. One line
         // stopped fitting once full screen and quit joined the set.
-        let actions = "⌘ + arrows Send   ·   ⌘2-4 Split   ·   ↵ Full screen   ·   ⌫ Exit full screen   ·   ⌘Q Quit app   ·   space Swap all   ·   ⌘Z Undo"
+        let actions = "tab Activate   ·   ⌘ + arrows Send   ·   ⌘2-4 Split   ·   ↵ Full screen   ·   ⌫ Exit full screen   ·   ⌘Q Quit app   ·   space Swap all   ·   ⌘Z Undo"
         if !searchQuery.isEmpty {
             drawSearchField()
         }

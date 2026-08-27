@@ -99,3 +99,6 @@
 /* Quick split */
 "%d-way split" = "%d분할";
 "Split into 2, 3, or 4 tiles" = "2/3/4분할로 배치";
+
+/* Activate */
+"Bring the focused window to the front, as-is" = "포커스된 창을 그대로 맨 앞으로";

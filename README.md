@@ -53,6 +53,7 @@ Closing the overlay **any** way puts every window back exactly where it was.
 |---|---|
 | **arrows** | Aim the focus cursor. **Never** moves a window — safe to press any time |
 | **⇧ Shift** | Tapped on its own: select the focused window — tap again to deselect |
+| **tab** | Bring the focused window to the front and activate it — as-is, not full screen |
 | **⌘ + arrows** | Send the selection to the display in that direction |
 | **⌘2 / ⌘3 / ⌘4** | Tile the targets into an even 2, 3, or 4-way split |
 | **↵ Enter** | Put the selection into full screen |
@@ -66,6 +67,13 @@ Closing the overlay **any** way puts every window back exactly where it was.
 
 Every action works on **the selection, or the focused window when nothing is
 selected** — so you can aim at one window and act on it without selecting first.
+
+### Getting to work
+
+**tab** raises the focused window and activates it — full size, exactly where it
+already sits, ready to type into. Unlike every other action key, it never changes
+the window itself; it only changes what is in front. Reach for it when you opened
+the overview to *find* a window, not to rearrange anything.
 
 ### Aim first, then pick
 
@@ -114,6 +122,13 @@ so ⌘2 on five overlapping windows still gives you two clean piles instead of o
 
 With a selection that spans both displays, each display's share of it gets its
 own split, sized to how many landed there.
+
+**With nothing selected**, ⌘2/3/4 splits whichever display your mouse is
+currently over — not the display the aim cursor happens to be on. Aiming with
+arrows is precise on purpose everywhere else, but a split with no selection acts
+on an entire screen, and requiring an arrow-navigate over to a display just to
+split it made the feature look broken on whichever one was not already focused.
+Select specific windows (⇧ or ⌘-click) when you want exact control instead.
 
 ### Swapping all windows
 
@@ -274,7 +289,13 @@ Dry-run the move actions without touching a single window:
 
 ```bash
 ./dist/ScreenSwap.app/Contents/MacOS/ScreenSwap --plan-swap
+./dist/ScreenSwap.app/Contents/MacOS/ScreenSwap --plan-split 4
 ```
+
+`--plan-split` checks every display, not just the primary one — it prints each
+screen's slot rects and confirms they tile its visible area exactly (no gap, no
+overlap), which is exactly the kind of thing a secondary display's non-zero,
+often negative AppKit origin can quietly get wrong.
 
 For overlay problems, launch with logging and read `~/Library/Logs/ScreenSwap.log`:
 

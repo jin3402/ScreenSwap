@@ -99,3 +99,6 @@
 /* Quick split */
 "%d-way split" = "%d-way split";
 "Split into 2, 3, or 4 tiles" = "Split into 2, 3, or 4 tiles";
+
+/* Activate */
+"Bring the focused window to the front, as-is" = "Bring the focused window to the front, as-is";
