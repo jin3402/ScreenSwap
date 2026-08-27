@@ -81,6 +81,7 @@ final class ShortcutGuideWindowController: NSWindowController {
             (L("Arrows"),       L("Aim the focus cursor (never moves a window)")),
             ("⇧",               L("Select or deselect the focused window")),
             ("⌘ + ←→↑↓",        L("Send the selection to that display")),
+            ("⌘2 / ⌘3 / ⌘4",    L("Split into 2, 3, or 4 tiles")),
             ("↵",               L("Full screen")),
             ("⌫",               L("Exit full screen")),
             ("⌘Q",              L("Quit the selected window's app")),

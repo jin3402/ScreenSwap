@@ -32,7 +32,12 @@ fi
 echo "==> Signing with: $DEVELOPER_ID"
 # --options runtime enables the hardened runtime, which notarization requires.
 # --timestamp embeds a secure timestamp, likewise required.
-codesign --force --deep \
+#
+# Deliberately no --deep: Apple advises against it, since it walks nested code in
+# an unspecified order and can sign things with the wrong flags. The bundle has no
+# nested frameworks or helpers to sign today, so this is a single top-level sign;
+# if a framework or XPC service is added later, sign it explicitly, innermost first.
+codesign --force \
 	--options runtime \
 	--timestamp \
 	--sign "$DEVELOPER_ID" \

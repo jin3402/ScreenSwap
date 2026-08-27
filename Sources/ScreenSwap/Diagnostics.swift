@@ -26,6 +26,11 @@ enum Diagnostics {
            let direction = parseDirection(arguments[index + 1]) {
             planSend(direction)
         }
+        if let index = arguments.firstIndex(of: "--plan-split"),
+           index + 1 < arguments.count,
+           let count = Int(arguments[index + 1]) {
+            planSplit(count)
+        }
     }
 
     // MARK: - Sections
@@ -174,6 +179,49 @@ enum Diagnostics {
         print("        from \(fmt(anchor.frame))")
         print("        to   \(fmt(CGRect(origin: origin, size: size)))")
         print("        relative position preserved: (\(pct(relativeX)), \(pct(relativeY)))")
+    }
+
+    private static func planSplit(_ count: Int) {
+        section("Plan: ⌘\(count) (quick split)")
+
+        guard let screen = DisplayManager.primaryScreen else {
+            print("  No display.")
+            return
+        }
+
+        let slots = QuickSplit.slotFrames(count: count, on: screen)
+        print("  \(DisplayManager.name(of: screen)), visible \(fmt(DisplayManager.cgVisibleFrame(of: screen)))")
+        print("  requested \(count)-way -> \(slots.count) slot(s):")
+        for (index, slot) in slots.enumerated() {
+            print("        [\(index)] \(fmt(slot))")
+        }
+
+        // Every slot should sit fully inside the visible frame, and slots should
+        // together cover it with no gap and no overlap. A coordinate-system slip
+        // (AppKit y-up vs CG y-down) is exactly the kind of bug this would catch:
+        // it would not crash, it would just quietly stack every slot at the top
+        // or leave the bottom of the screen empty.
+        let visible = DisplayManager.cgVisibleFrame(of: screen)
+        let allInside = slots.allSatisfy { visible.contains($0.insetBy(dx: 1, dy: 1)) }
+        let coveredArea = slots.reduce(0) { $0 + $1.width * $1.height }
+        let expectedArea = visible.width * visible.height
+        let areaOK = abs(coveredArea - expectedArea) < expectedArea * 0.01
+        print("  all slots inside visible frame: \(allInside ? "OK" : "FAILED")")
+        print("  slot area matches screen area:  \(areaOK ? "OK" : "FAILED (\(Int(coveredArea)) vs \(Int(expectedArea)))")")
+
+        let windows = WindowManager.listAllWindows().filter { $0.isMovable && DisplayManager.screen(containingCGRect: $0.frame) == screen }
+        guard !windows.isEmpty else {
+            print("")
+            print("  No movable windows on this display to preview placement for.")
+            return
+        }
+        print("")
+        print("  Current windows on this display, in the order they would fill slots:")
+        for (index, window) in windows.enumerated() {
+            let slot = index < slots.count ? "slot \(min(index, slots.count - 1))" : "stacked on slot \(slots.count - 1)"
+            print("        \(pad(window.appName, 24)) \(fmt(window.frame))  -> \(slot)")
+        }
+        print("  overlapping as a group: \(QuickSplit.windowsOverlapSignificantly(windows) ? "YES (swap-all would auto-split)" : "no (swap-all would keep proportional placement)")")
     }
 
     // MARK: - Formatting

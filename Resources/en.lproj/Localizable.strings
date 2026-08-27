@@ -95,3 +95,7 @@
 /* Full screen toggle */
 "Toggle full screen" = "Toggle full screen";
 "Full screen the frontmost window, or put it back to a window" = "Full screen the frontmost window, or put it back to a window";
+
+/* Quick split */
+"%d-way split" = "%d-way split";
+"Split into 2, 3, or 4 tiles" = "Split into 2, 3, or 4 tiles";

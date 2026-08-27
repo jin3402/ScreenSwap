@@ -45,6 +45,7 @@ final class ExposeItem {
 /// - arrow           → move the focus cursor; never moves a window
 /// - `Shift`         → tapped on its own, selects or deselects the focused window
 /// - `Cmd`+arrow     → send the selected windows to the display that way
+/// - `Cmd`+2/3/4     → tile the targets into an even 2/3/4-way split
 /// - `Enter`         → put the selected windows into full screen
 /// - `Backspace`     → take them back out of full screen
 /// - `Space`         → swap all windows between the two displays
@@ -360,6 +361,18 @@ final class ExposeOverlayController: NSObject {
             quitTargets()
             return true
 
+        case kVK_ANSI_2 where flags == [.command]:
+            quickSplit(2)
+            return true
+
+        case kVK_ANSI_3 where flags == [.command]:
+            quickSplit(3)
+            return true
+
+        case kVK_ANSI_4 where flags == [.command]:
+            quickSplit(4)
+            return true
+
         case kVK_Delete:
             guard flags.isEmpty else { return true }
             // While searching, Backspace edits the query; otherwise it is the
@@ -555,6 +568,61 @@ final class ExposeOverlayController: NSObject {
         }
         Self.debug("exit fullscreen \(succeeded)/\(windows.count)")
         if succeeded == 0 { NSSound.beep() }
+    }
+
+    /// ⌘2 / ⌘3 / ⌘4: tile windows into an even split, so windows that were
+    /// overlapping stop hiding each other.
+    ///
+    /// Targets the selection — grouped by display, kept in the order it was
+    /// built — or, with nothing selected, every window on the display the
+    /// cursor is aimed at, in front-to-back order. Windows beyond the split
+    /// count stack on the last slot rather than being left untouched.
+    private func quickSplit(_ count: Int) {
+        let groups = resolveSplitGroups()
+        guard !groups.isEmpty else {
+            NSSound.beep()
+            return
+        }
+
+        // Restore first: a split must place windows at their real size, not
+        // whatever the temporary spread shrank them to.
+        let saved = restorations
+        dismiss(restoringWindows: false)
+        WindowArranger.restore(saved)
+        restorations = []
+
+        let allWindows = groups.flatMap { $0.windows }
+        MoveHistory.record(allWindows, action: L("%d-way split", min(max(count, 2), 4)))
+
+        var moved = 0
+        for group in groups {
+            moved += QuickSplit.placeWindows(group.windows, splitCount: count, on: group.screen)
+        }
+        Self.debug("split \(count)-way: moved \(moved)/\(allWindows.count) windows across \(groups.count) screen(s)")
+        if moved == 0 { NSSound.beep() }
+    }
+
+    /// Groups the split's targets by display: the selection (screen-grouped,
+    /// kept in the order it was built) if there is one, otherwise every window
+    /// on the display the cursor is currently aimed at, in front-to-back order.
+    private func resolveSplitGroups() -> [(screen: NSScreen, windows: [WindowInfo])] {
+        if !selectedIndices.isEmpty {
+            var groups: [(screen: NSScreen, windows: [WindowInfo])] = []
+            for index in selectedIndices where index < items.count {
+                let item = items[index]
+                if let existing = groups.firstIndex(where: { $0.screen == item.screen }) {
+                    groups[existing].windows.append(item.window)
+                } else {
+                    groups.append((item.screen, [item.window]))
+                }
+            }
+            return groups
+        }
+
+        guard let targetScreen = focusedIndex.flatMap({ $0 < items.count ? items[$0].screen : nil })
+            ?? DisplayManager.screenUnderMouse() else { return [] }
+        let windows = items.filter { $0.screen == targetScreen }.map { $0.window }
+        return windows.isEmpty ? [] : [(targetScreen, windows)]
     }
 
     /// ⌘Q: quit the apps that own the selected windows, or the focused one
@@ -1059,7 +1127,7 @@ final class ExposeGridView: NSView {
 
         // Two lines: what acts on the target, then how to aim and get out. One line
         // stopped fitting once full screen and quit joined the set.
-        let actions = "⌘ + arrows Send   ·   ↵ Full screen   ·   ⌫ Exit full screen   ·   ⌘Q Quit app   ·   space Swap all   ·   ⌘Z Undo"
+        let actions = "⌘ + arrows Send   ·   ⌘2-4 Split   ·   ↵ Full screen   ·   ⌫ Exit full screen   ·   ⌘Q Quit app   ·   space Swap all   ·   ⌘Z Undo"
         if !searchQuery.isEmpty {
             drawSearchField()
         }

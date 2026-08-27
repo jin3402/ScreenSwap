@@ -26,7 +26,9 @@ enum WindowSwapper {
         return swapAllWindows(between: primary, and: secondary)
     }
 
-    /// Swaps windows between two specific displays.
+    /// Swaps windows between two specific displays. A group landing on a screen
+    /// where they were overlapping each other gets tiled into a split instead of
+    /// each window keeping its old (overlapped) relative position — see `place`.
     @discardableResult
     static func swapAllWindows(between first: NSScreen, and second: NSScreen) -> Int {
         let windows = WindowManager.listAllWindows().filter { $0.isMovable }
@@ -58,23 +60,40 @@ enum WindowSwapper {
                   + toFirst.map { $0.appName }.joined(separator: ", "))
 
         var moved = 0
-        for window in toSecond {
-            if WindowManager.moveWindow(window, to: second) {
-                moved += 1
-            } else {
-                Log.debug("  move FAILED: \(window.appName) -> \(DisplayManager.name(of: second))")
-            }
-        }
-        for window in toFirst {
-            if WindowManager.moveWindow(window, to: first) {
-                moved += 1
-            } else {
-                Log.debug("  move FAILED: \(window.appName) -> \(DisplayManager.name(of: first))")
-            }
-        }
+        moved += place(toSecond, on: second)
+        moved += place(toFirst, on: first)
         Log.debug("swap: moved \(moved)/\(toSecond.count + toFirst.count)")
 
         if moved == 0 { NSSound.beep() }
+        return moved
+    }
+
+    /// Places a group of windows arriving on `screen`.
+    ///
+    /// If they were overlapping each other on their way in, they land tiled
+    /// into an up-to-4-way split instead — a pile of overlapping windows would
+    /// otherwise just re-pile itself on the other display, which is exactly the
+    /// "keeps the overlapped state" behaviour a full swap should fix. Windows
+    /// that were already side by side keep their own proportional position, so
+    /// a deliberate custom layout swaps over unchanged.
+    private static func place(_ windows: [WindowInfo], on screen: NSScreen) -> Int {
+        guard !windows.isEmpty else { return 0 }
+
+        if windows.count >= 2 && QuickSplit.windowsOverlapSignificantly(windows) {
+            let splitCount = min(windows.count, 4)
+            let count = QuickSplit.placeWindows(windows, splitCount: splitCount, on: screen)
+            Log.debug("  \(DisplayManager.name(of: screen)): overlapping, \(splitCount)-way split (\(count) placed)")
+            return count
+        }
+
+        var moved = 0
+        for window in windows {
+            if WindowManager.moveWindow(window, to: screen) {
+                moved += 1
+            } else {
+                Log.debug("  move FAILED: \(window.appName) -> \(DisplayManager.name(of: screen))")
+            }
+        }
         return moved
     }
 

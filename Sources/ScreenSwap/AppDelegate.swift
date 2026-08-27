@@ -138,7 +138,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                                                            modifiers: shortcut.hotkeyModifiers) {
                 AppDelegate.perform(action)
             }
-            if registered == nil {
+            if let registered {
+                Log.debug("hotkey registered: \(action.rawValue) -> \(shortcut.displayString) (id \(registered))")
+            } else {
                 failedActions.insert(action)
                 Log.debug("hotkey unavailable for \(action.rawValue): \(shortcut.displayString)")
             }

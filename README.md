@@ -54,6 +54,7 @@ Closing the overlay **any** way puts every window back exactly where it was.
 | **arrows** | Aim the focus cursor. **Never** moves a window — safe to press any time |
 | **⇧ Shift** | Tapped on its own: select the focused window — tap again to deselect |
 | **⌘ + arrows** | Send the selection to the display in that direction |
+| **⌘2 / ⌘3 / ⌘4** | Tile the targets into an even 2, 3, or 4-way split |
 | **↵ Enter** | Put the selection into full screen |
 | **⌫ Backspace** | Take the selection back out of full screen |
 | **⌘Q** | Quit the apps owning the selection |
@@ -97,6 +98,32 @@ Past nine windows, **just start typing**. Matching is on both app name and windo
 title, so `mail` finds Mail and `invoice` finds the document window with it in the
 title. Non-matches stay on screen but recede, so you can still see what you are
 ruling out. **⌫** edits the query, **esc** clears it.
+
+### Splitting overlapping windows
+
+**⌘2**, **⌘3**, or **⌘4** tiles the targets into an even split on their display:
+
+- **2-way** — left half, right half
+- **3-way** — top half (full width), bottom-left quarter, bottom-right quarter
+- **4-way** — four quadrants, filling the display
+
+Windows fill slots in front-to-back order, or in the order you selected them if
+you selected more than one. More windows than slots is not an error — anything
+past the last slot stacks on top of it rather than being left stranded off-grid,
+so ⌘2 on five overlapping windows still gives you two clean piles instead of one.
+
+With a selection that spans both displays, each display's share of it gets its
+own split, sized to how many landed there.
+
+### Swapping all windows
+
+**space** swaps every window between the two displays. A group that was
+overlapping on its way over lands in the same split **⌘2/3/4** would give it
+(2-way, 3-way, or capped at 4-way, extras stacked) instead of arriving in the
+same pile it left — the whole point of a full swap is not ending up exactly
+where you started, just on the other screen. A group that was already side by
+side keeps its own relative position, so a deliberate custom layout swaps over
+unchanged rather than getting re-tiled against your will.
 
 ### Undo
 
